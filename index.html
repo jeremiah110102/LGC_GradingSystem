@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Teacher Final Grade System</title>
+<style>
+:root{--ink:#1c2733;--navy:#1f3a5f;--paper:#f4f6f8;--card:#fff;--line:#d9e0e7;--ok:#1f7a4d;--bad:#b3261e;--warn:#9a6700;--gold:#e0a82e}
+*{box-sizing:border-box}
+body{margin:0;font:15px/1.5 Georgia,"Times New Roman",serif;color:var(--ink);background:var(--paper)}
+button,input,select{font:inherit}
+:focus-visible{outline:3px solid var(--gold);outline-offset:1px}
+.hidden{display:none!important}
+/* login */
+.login-wrap{min-height:100vh;display:grid;place-items:center;padding:16px}
+.login{width:100%;max-width:380px;background:var(--card);border:1px solid var(--line);border-top:6px solid var(--navy);border-radius:6px;padding:28px}
+.logo{width:64px;height:64px;margin:0 auto 10px;border:2px dashed var(--navy);border-radius:50%;display:grid;place-items:center;color:var(--navy);font-size:11px}
+h1{font-size:22px;margin:0 0 20px;text-align:center;color:var(--navy)}
+label{display:block;margin:12px 0 4px;font-weight:bold}
+input,select{width:100%;padding:9px 10px;border:1px solid #aab6c2;border-radius:4px;background:#fff}
+.pw{display:flex;gap:6px}.pw button{width:auto}
+.check{display:flex;gap:8px;align-items:center;margin:12px 0;font-weight:normal}.check input{width:auto}
+button{cursor:pointer;border:0;border-radius:4px;padding:9px 14px;background:var(--navy);color:#fff}
+button.ghost{background:#e8edf2;color:var(--ink)}
+button:disabled{opacity:.55;cursor:not-allowed}
+.login .go{width:100%;margin-top:6px}
+.msg{margin-top:12px;padding:9px 12px;border-radius:4px;font-size:14px}
+.msg.err{background:#fbe9e7;color:var(--bad)}.msg.ok{background:#e4f4ea;color:var(--ok)}
+.demo{font-size:12px;color:var(--warn);text-align:center;margin-top:14px}
+/* app */
+header{background:var(--navy);color:#fff;padding:14px 20px;display:flex;flex-wrap:wrap;gap:12px;justify-content:space-between;align-items:center}
+header h2{margin:0;font-size:18px}
+header .meta{font-size:13px;opacity:.9}
+main{max-width:1100px;margin:0 auto;padding:18px 14px 60px}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;margin-bottom:18px}
+.stat{background:var(--card);border:1px solid var(--line);border-left:5px solid var(--navy);border-radius:4px;padding:12px}
+.stat b{display:block;font-size:28px;line-height:1.1}.stat span{font-size:13px}
+.stat.p{border-left-color:var(--ok)}.stat.f{border-left-color:var(--bad)}.stat.m{border-left-color:var(--gold)}
+.tools{display:flex;gap:10px;margin-bottom:10px;flex-wrap:wrap}.tools input{max-width:280px}
+.scroll{overflow-x:auto;background:var(--card);border:1px solid var(--line);border-radius:4px}
+table{width:100%;border-collapse:collapse;min-width:860px}
+th,td{padding:8px 10px;text-align:left;border-bottom:1px solid var(--line);vertical-align:middle}
+th{background:#eaeff4;font-size:13px}
+td input[type=number]{width:80px}.rem{display:flex;flex-direction:column;gap:4px;min-width:150px}
+.tag{display:inline-block;padding:2px 8px;border-radius:10px;font-size:12px}
+.tag.c{background:#e4f4ea;color:var(--ok)}.tag.m{background:#fdf1d6;color:var(--warn)}
+td.bad input{border-color:var(--bad);background:#fff5f4}
+.rowerr{color:var(--bad);font-size:12px}
+#toast{position:fixed;bottom:16px;left:50%;transform:translateX(-50%);min-width:240px;text-align:center;box-shadow:0 4px 14px rgba(0,0,0,.25)}
+.spin{display:inline-block;width:12px;height:12px;border:2px solid #fff;border-top-color:transparent;border-radius:50%;animation:s .7s linear infinite;vertical-align:-2px}
+@keyframes s{to{transform:rotate(360deg)}}
+@media(prefers-reduced-motion:reduce){.spin{animation-duration:2s}}
+@media(max-width:600px){main{padding:12px 8px}}
+</style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div class="login-wrap" id="loginView">
+  <div class="login">
+    <div class="logo">LOGO</div>
+    <h1>Teacher Final Grade System</h1>
+    <label for="code">Teacher Code</label>
+    <input id="code" autocomplete="username" placeholder="e.g. T001">
+    <label for="pass">Password</label>
+    <div class="pw"><input id="pass" type="password" autocomplete="current-password"><button type="button" class="ghost" id="togglePw">Show</button></div>
+    <label class="check"><input type="checkbox" id="remember"> Remember me</label>
+    <button class="go" id="loginBtn">Log in</button>
+    <div id="loginMsg" class="msg err hidden"></div>
+    <div class="demo hidden" id="demoNote">Demo mode: no Google Script URL set, so sample data is used and nothing is saved to Google Sheets.</div>
+  </div>
+</div>
+
+<!-- APP -->
+<div id="appView" class="hidden">
+  <header>
+    <div>
+      <h2>Teacher Final Grade System</h2>
+      <div class="meta" id="tMeta"></div>
+    </div>
+    <button class="ghost" id="logoutBtn">Log out</button>
+  </header>
+  <main>
+    <div class="cards">
+      <div class="stat"><b id="sTotal">0</b><span>Total students</span></div>
+      <div class="stat"><b id="sDone">0</b><span>Grades completed</span></div>
+      <div class="stat m"><b id="sMiss">0</b><span>Grades missing</span></div>
+      <div class="stat p"><b id="sPass">0</b><span>Passed</span></div>
+      <div class="stat f"><b id="sFail">0</b><span>Failed</span></div>
+    </div>
+    <div class="tools"><select id="subjectSel" aria-label="Subject" style="max-width:200px"></select><input id="search" type="search" placeholder="Search by name or ID" aria-label="Search students"></div>
+    <div class="scroll">
+      <table>
+        <thead><tr><th>#</th><th>No.</th><th>Student Name</th><th>Section</th><th>Final Grade</th><th>Remark</th><th>Status</th><th>Action</th></tr></thead>
+        <tbody id="rows"></tbody>
+      </table>
+    </div>
+  </main>
+</div>
+<div id="toast" class="msg hidden" role="status"></div>
+
+<script>
+/* ================= SETTINGS ================= */
+const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxXC9k-mZyPDV8uDL-AJKCnl8f2HGtbicxOjx4HOFGQTJHGVz4YJ-oaiBTnlr645cjs8w/exec";
+const PASSING_GRADE = 75;
+const SCHOOL_YEAR = "2026-2027";
+const REMARKS = ["Passed", "Failed", "Incomplete", "Dropped"];
+/* ============================================ */
+
+const $ = id => document.getElementById(id);
+const DEMO = GOOGLE_SCRIPT_URL.startsWith("PASTE_");
+let session = null;       // {code, password, teacher}
+let students = [];        // [{id,name,section,grade,remark}]
+const saving = new Set();
+let subject = "";
+const gr = s => (s.grades && s.grades[subject]) || { grade: "", remark: "" };
+
+/* ---- API (POST as text/plain avoids CORS preflight with Apps Script) ---- */
+async function api(payload) {
+  if (DEMO) return demoApi(payload);
+  const res = await fetch(GOOGLE_SCRIPT_URL, {
+    method: "POST",
+    headers: { "Content-Type": "text/plain;charset=utf-8" },
+    body: JSON.stringify(payload)
+  });
+  if (!res.ok) throw new Error("Network error");
+  return res.json();
+}
+
+/* Demo data used ONLY when GOOGLE_SCRIPT_URL is not set */
+function demoApi(p) {
+  const T = { T001: ["Sir Jerico Paolo Hernandez", ["GE 1", "GE 4"]], T002: ["Ma'am Roxan Manuel", ["GE 2"]] };
+  const S = [["1", "Abes, Kaila Khamille C."], ["2", "Aguilar, Jhelyn"], ["3", "Alcanices, Queenylyn C."]];
+  return new Promise(r => setTimeout(() => {
+    if (p.action === "login") {
+      if (!T[p.code] || p.password !== "123456") return r({ ok: false, error: "Invalid teacher code or password." });
+      return r({ ok: true, teacher: { code: p.code, name: T[p.code][0], subjects: T[p.code][1], section: "BSRT 1A" },
+        students: S.map(s => ({ id: s[0], name: s[1], section: "BSRT 1A", grades: {} })) });
+    }
+    r({ ok: true });
+  }, 400));
+}
+
+/* ---- Helpers ---- */
+function toast(text, type) {
+  const t = $("toast");
+  t.textContent = text; t.className = "msg " + type;
+  clearTimeout(toast.id); toast.id = setTimeout(() => t.classList.add("hidden"), 3500);
+}
+function suggest(g) { return g >= PASSING_GRADE ? "Passed" : "Failed"; }
+function validGrade(v) {
+  if (v === "" || isNaN(Number(v))) return false;
+  const n = Number(v); return n >= 0 && n <= 100;
+}
+const esc = s => String(s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+
+/* ---- Login ---- */
+$("togglePw").onclick = () => {
+  const show = $("pass").type === "password";
+  $("pass").type = show ? "text" : "password"; $("togglePw").textContent = show ? "Hide" : "Show";
+};
+$("loginBtn").onclick = login;
+[$("code"), $("pass")].forEach(el => el.addEventListener("keydown", e => e.key === "Enter" && login()));
+
+async function login() {
+  const code = $("code").value.trim(), password = $("pass").value;
+  const err = $("loginMsg");
+  err.classList.add("hidden");
+  if (!code || !password) { err.textContent = "Enter your teacher code and password."; err.classList.remove("hidden"); return; }
+  const btn = $("loginBtn"); btn.disabled = true; btn.innerHTML = '<span class="spin"></span> Logging in';
+  try {
+    const d = await api({ action: "login", code, password });
+    if (!d.ok) throw new Error(d.error || "Login failed.");
+    session = { code, password, teacher: d.teacher };
+    students = d.students;
+    try { $("remember").checked ? localStorage.setItem("tfgs_code", code) : localStorage.removeItem("tfgs_code"); } catch (e) {}
+    showApp();
+  } catch (e) {
+    err.textContent = e.message === "Network error" || e instanceof TypeError ? "Unable to reach the server. Check your connection." : e.message;
+    err.classList.remove("hidden");
+  } finally { btn.disabled = false; btn.textContent = "Log in"; }
+}
+
+$("logoutBtn").onclick = () => {
+  session = null; students = []; $("pass").value = "";
+  $("appView").classList.add("hidden"); $("loginView").classList.remove("hidden");
+};
+
+/* ---- Dashboard ---- */
+function showApp() {
+  const t = session.teacher;
+  $("subjectSel").innerHTML = t.subjects.map(x => `<option>${esc(x)}</option>`).join("");
+  subject = t.subjects[0];
+  $("tMeta").textContent = `${t.name} (${t.code}) | ${t.section} | S.Y. ${SCHOOL_YEAR}`;
+  $("loginView").classList.add("hidden"); $("appView").classList.remove("hidden");
+  render();
+}
+function stats() {
+  const done = students.filter(s => gr(s).grade !== "" && gr(s).grade != null);
+  $("sTotal").textContent = students.length;
+  $("sDone").textContent = done.length;
+  $("sMiss").textContent = students.length - done.length;
+  $("sPass").textContent = done.filter(s => Number(gr(s).grade) >= PASSING_GRADE).length;
+  $("sFail").textContent = done.filter(s => Number(gr(s).grade) < PASSING_GRADE).length;
+}
+
+/* ---- Student table ---- */
+function render() {
+  const q = $("search").value.toLowerCase();
+  const tb = $("rows"); tb.innerHTML = "";
+  students.forEach((s, i) => {
+    if (q && !(s.name + s.id).toLowerCase().includes(q)) return;
+    const g = gr(s), has = g.grade !== "" && g.grade != null;
+    const std = REMARKS.includes(g.remark);
+    const tr = document.createElement("tr");
+    tr.dataset.id = s.id;
+    tr.innerHTML = `<td>${String(i + 1).padStart(3, "0")}</td><td>${esc(s.id)}</td><td>${esc(s.name)}</td><td>${esc(s.section)}</td>
+      <td><input type="number" min="0" max="100" step="any" class="g" aria-label="Final grade for ${esc(s.name)}" value="${has ? esc(g.grade) : ""}"><div class="rowerr"></div></td>
+      <td><div class="rem"><select class="r" aria-label="Remark">
+        <option value="">Select</option>${REMARKS.map(r => `<option ${g.remark === r ? "selected" : ""}>${r}</option>`).join("")}<option value="__c" ${g.remark && !std ? "selected" : ""}>Custom...</option></select>
+        <input class="c ${g.remark && !std ? "" : "hidden"}" placeholder="Custom remark" value="${g.remark && !std ? esc(g.remark) : ""}"></div></td>
+      <td><span class="tag ${has ? "c" : "m"}">${has ? "Completed" : "Missing"}</span></td>
+      <td><button class="save">Save</button></td>`;
+    tb.appendChild(tr);
+  });
+  if (!tb.children.length) tb.innerHTML = '<tr><td colspan="8">No students found.</td></tr>';
+  stats();
+}
+$("search").oninput = render;
+$("subjectSel").onchange = e => { subject = e.target.value; render(); };
+
+/* Auto-suggest remark when grade is typed; toggle custom box */
+$("rows").addEventListener("input", e => {
+  const tr = e.target.closest("tr"); if (!tr) return;
+  if (e.target.classList.contains("g")) {
+    const v = e.target.value, bad = v !== "" && !validGrade(v);
+    e.target.parentElement.classList.toggle("bad", bad);
+    tr.querySelector(".rowerr").textContent = bad ? "Enter a number from 0 to 100." : "";
+    if (validGrade(v)) {
+      const sel = tr.querySelector(".r");
+      if (!sel.dataset.manual) { sel.value = suggest(Number(v)); tr.querySelector(".c").classList.add("hidden"); }
+    }
+  }
+});
+$("rows").addEventListener("change", e => {
+  if (!e.target.classList.contains("r")) return;
+  const tr = e.target.closest("tr");
+  e.target.dataset.manual = "1";  // teacher override wins over suggestion
+  tr.querySelector(".c").classList.toggle("hidden", e.target.value !== "__c");
+});
+$("rows").addEventListener("click", e => { if (e.target.classList.contains("save")) saveRow(e.target); });
+
+/* ---- Save ---- */
+async function saveRow(btn) {
+  const tr = btn.closest("tr"), id = tr.dataset.id;
+  if (saving.has(id)) return;                       // block double-click
+  const s = students.find(x => x.id === id);
+  const gIn = tr.querySelector(".g"), err = tr.querySelector(".rowerr");
+  const sel = tr.querySelector(".r").value;
+  const remark = sel === "__c" ? tr.querySelector(".c").value.trim() : sel;
+
+  if (!validGrade(gIn.value)) { gIn.parentElement.classList.add("bad"); err.textContent = "Enter a number from 0 to 100."; toast("Invalid grade. Enter a number from 0 to 100.", "err"); return; }
+  if (!s) { toast("Student not found.", "err"); return; }
+  if (!session) { toast("Session expired. Please log in again.", "err"); $("logoutBtn").click(); return; }
+  if (!remark) { err.textContent = "Choose or enter a remark."; toast("Choose or enter a remark.", "err"); return; }
+  err.textContent = "";
+
+  saving.add(id); btn.disabled = true; btn.innerHTML = '<span class="spin"></span>';
+  try {
+    const d = await api({
+      action: "saveGrade", code: session.code, password: session.password,
+      studentId: s.id, studentName: s.name, subject, section: s.section,
+      finalGrade: Number(gIn.value), remark
+    });
+    if (!d.ok) throw new Error(d.error);
+    s.grades = s.grades || {}; s.grades[subject] = { grade: Number(gIn.value), remark };
+    toast("Grade saved successfully.", "ok");
+    tr.querySelector(".tag").className = "tag c"; tr.querySelector(".tag").textContent = "Completed";
+    stats();
+  } catch (e) {
+    toast("Unable to save grade. Please try again.", "err");
+  } finally { saving.delete(id); btn.disabled = false; btn.textContent = "Save"; }
+}
+
+/* ---- Init ---- */
+if (DEMO) $("demoNote").classList.remove("hidden");
+try { const c = localStorage.getItem("tfgs_code"); if (c) { $("code").value = c; $("remember").checked = true; } } catch (e) {}
+</script>
+</body>
+</html>
