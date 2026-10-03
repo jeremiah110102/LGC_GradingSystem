@@ -2,7 +2,8 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#1f3a5f">
 <title>Teacher Final Grade System</title>
 <style>
 :root{--ink:#1c2733;--navy:#1f3a5f;--paper:#f4f6f8;--card:#fff;--line:#d9e0e7;--ok:#1f7a4d;--bad:#b3261e;--warn:#9a6700;--gold:#e0a82e}
@@ -51,6 +52,35 @@ td.bad input{border-color:var(--bad);background:#fff5f4}
 @keyframes s{to{transform:rotate(360deg)}}
 @media(prefers-reduced-motion:reduce){.spin{animation-duration:2s}}
 @media(max-width:600px){main{padding:12px 8px}}
+
+/* ---- all-device support ---- */
+html{-webkit-text-size-adjust:100%}
+body{padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left)}
+input,select{font-size:16px;min-height:44px}
+button{min-height:44px;touch-action:manipulation}
+.logo{overflow:hidden}.logo img{width:100%;height:100%;object-fit:contain}
+.cw{flex:1;min-width:0}
+#toast{max-width:calc(100% - 24px);bottom:calc(16px + env(safe-area-inset-bottom))}
+.cards{grid-template-columns:repeat(auto-fit,minmax(120px,1fr))}
+@media(max-width:760px){
+ .tools input,.tools select{max-width:none!important;flex:1 1 100%}
+ .scroll{overflow:visible;background:none;border:0}
+ table{min-width:0;display:block}
+ thead{display:none}
+ tbody{display:block}
+ tr{display:block;background:var(--card);border:1px solid var(--line);border-left:5px solid var(--navy);border-radius:6px;padding:8px 12px;margin-bottom:12px}
+ td{display:flex;align-items:center;gap:10px;border:0;padding:6px 0}
+ td::before{content:attr(data-l);flex:0 0 34%;font-weight:bold;font-size:13px;color:#4a5a6b}
+ td[data-l="Student"]{font-size:17px;font-weight:bold}
+ td input[type=number]{width:100%}
+ .rem{min-width:0;flex:1}
+ td .save{width:100%}
+ td[data-l="Action"]::before{display:none}
+ header{padding:12px 14px}
+ .login{padding:22px 18px}
+}
+@media(min-width:1400px){main{max-width:1280px}}
+@media print{header button,.tools,.save{display:none}}
 </style>
 </head>
 <body>
@@ -58,7 +88,7 @@ td.bad input{border-color:var(--bad);background:#fff5f4}
 <!-- LOGIN -->
 <div class="login-wrap" id="loginView">
   <div class="login">
-    <div class="logo">LOGO</div>
+    <div class="logo"><img src="logo.jpg" alt="School logo" onerror="this.replaceWith('LOGO')"></div>
     <h1>Teacher Final Grade System</h1>
     <label for="code">Teacher Code</label>
     <input id="code" autocomplete="username" placeholder="e.g. T001">
@@ -214,13 +244,13 @@ function render() {
     const std = REMARKS.includes(g.remark);
     const tr = document.createElement("tr");
     tr.dataset.id = s.id;
-    tr.innerHTML = `<td>${String(i + 1).padStart(3, "0")}</td><td>${esc(s.id)}</td><td>${esc(s.name)}</td><td>${esc(s.section)}</td>
-      <td><input type="number" min="0" max="100" step="any" class="g" aria-label="Final grade for ${esc(s.name)}" value="${has ? esc(g.grade) : ""}"><div class="rowerr"></div></td>
-      <td><div class="rem"><select class="r" aria-label="Remark">
+    tr.innerHTML = `<td data-l="#">${String(i + 1).padStart(3, "0")}</td><td data-l="No.">${esc(s.id)}</td><td data-l="Student">${esc(s.name)}</td><td data-l="Section">${esc(s.section)}</td>
+      <td data-l="Final Grade"><div class="cw"><input type="number" inputmode="decimal" min="0" max="100" step="any" class="g" aria-label="Final grade for ${esc(s.name)}" value="${has ? esc(g.grade) : ""}"><div class="rowerr"></div></div></td>
+      <td data-l="Remark"><div class="rem"><select class="r" aria-label="Remark">
         <option value="">Select</option>${REMARKS.map(r => `<option ${g.remark === r ? "selected" : ""}>${r}</option>`).join("")}<option value="__c" ${g.remark && !std ? "selected" : ""}>Custom...</option></select>
         <input class="c ${g.remark && !std ? "" : "hidden"}" placeholder="Custom remark" value="${g.remark && !std ? esc(g.remark) : ""}"></div></td>
-      <td><span class="tag ${has ? "c" : "m"}">${has ? "Completed" : "Missing"}</span></td>
-      <td><button class="save">Save</button></td>`;
+      <td data-l="Status"><span class="tag ${has ? "c" : "m"}">${has ? "Completed" : "Missing"}</span></td>
+      <td data-l="Action"><button class="save">Save</button></td>`;
     tb.appendChild(tr);
   });
   if (!tb.children.length) tb.innerHTML = '<tr><td colspan="8">No students found.</td></tr>';
@@ -234,7 +264,7 @@ $("rows").addEventListener("input", e => {
   const tr = e.target.closest("tr"); if (!tr) return;
   if (e.target.classList.contains("g")) {
     const v = e.target.value, bad = v !== "" && !validGrade(v);
-    e.target.parentElement.classList.toggle("bad", bad);
+    e.target.closest("td").classList.toggle("bad", bad);
     tr.querySelector(".rowerr").textContent = bad ? "Enter a number from 0 to 100." : "";
     if (validGrade(v)) {
       const sel = tr.querySelector(".r");
@@ -259,7 +289,7 @@ async function saveRow(btn) {
   const sel = tr.querySelector(".r").value;
   const remark = sel === "__c" ? tr.querySelector(".c").value.trim() : sel;
 
-  if (!validGrade(gIn.value)) { gIn.parentElement.classList.add("bad"); err.textContent = "Enter a number from 0 to 100."; toast("Invalid grade. Enter a number from 0 to 100.", "err"); return; }
+  if (!validGrade(gIn.value)) { gIn.closest("td").classList.add("bad"); err.textContent = "Enter a number from 0 to 100."; toast("Invalid grade. Enter a number from 0 to 100.", "err"); return; }
   if (!s) { toast("Student not found.", "err"); return; }
   if (!session) { toast("Session expired. Please log in again.", "err"); $("logoutBtn").click(); return; }
   if (!remark) { err.textContent = "Choose or enter a remark."; toast("Choose or enter a remark.", "err"); return; }
